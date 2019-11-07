@@ -16,7 +16,7 @@ hd      - compute hash of all directory contents.
 hdb     - compute hash of all file database contents.
 
 
-## Usage Example
+## Usage
 
 For finding duplicate files:
 
