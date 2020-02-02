@@ -8,6 +8,7 @@ import hashlib
 import io
 import logging
 import os
+import platform
 
 from datetime import datetime
 
@@ -348,48 +349,64 @@ def hd(directory, ignore):
 
     file_list = get_file_list(directory, ignore)
     list_length = len(file_list)
-    logging.info('Number of files: {}'.format(list_length))
+    logging.info("Number of files: {}".format(list_length))
 
     contents_digest = []
     inx = 0
     for file_name in file_list:
         logging.info(
-            'Processing ({}/{}, {:.2f}%) file: {}'.format(
+            "Processing ({}/{}, {:.2f}%) file: {}".format(
                 inx + 1, list_length, (inx + 1) / list_length * 100, file_name
             )
         )
         file_digest = hash_file(file_name)
-        logging.info('{} *{}'.format(bin2str(file_digest), file_name))
+        logging.info("{} *{}".format(bin2str(file_digest), file_name))
         contents_digest.extend(file_digest)
         inx += 1
     contents_digest.sort()
     hasher = hashlib.md5()
     hasher.update(bytes(contents_digest))
     directory_digest = hasher.hexdigest()
-    print('{} *{} ({})'.format(directory_digest, directory, inx))
+    print("{} *{} ({})".format(directory_digest, directory, inx))
 
 
 def hdb(input_file):
     if (not os.path.exists(input_file)):
-        raise ValueError('Path does not exist: {}'.format(input_file))
+        raise ValueError("Path does not exist: {}".format(input_file))
 
     db = read_database(input_file)
 
     contents_digest = []
     for row in db:
-        file_hash = row['hash']
+        file_hash = row["hash"]
         file_digest = binascii.unhexlify(file_hash)
         contents_digest.extend(file_digest)
     contents_digest.sort()
     hasher = hashlib.md5()
     hasher.update(bytes(contents_digest))
     db_digest = hasher.hexdigest()
-    print('{} *{} ({})'.format(db_digest, input_file, len(contents_digest)))
+    print("{} *{} ({})".format(db_digest, input_file, len(contents_digest)))
+
+
+def hook_convenience(args):
+    curros = platform.system()
+    if (curros == "Darwin"):
+        if (args.ignore == [""]):
+            ans = input(
+                "Detected macOS: " +
+                "Exclude files '.DS_Store' and 'Icon' from search? (y/n)" +
+                "\n> "
+            )
+            if (ans.lower() == "y"):
+                args.ignore = ".DS_Store,Icon\r"
+            return args
+    return args
 
 
 def main():
     args = setup_args()
     setup_logging(args.log_level, args.log_format)
+    args = hook_convenience(args)
     logging.info(args)
 
     if ("which" not in args):
