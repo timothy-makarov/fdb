@@ -388,29 +388,29 @@ def hdb(input_file):
     print("{} *{} ({})".format(db_digest, input_file, len(contents_digest)))
 
 
-def hook_convenience(args):
+def hook_search_tip(args):
     curros = platform.system()
-    if (curros == "Darwin"):
-        if (args.ignore == [""]):
-            ans = input(
-                "Detected macOS: " +
-                "Exclude files '.DS_Store' and 'Icon' from search? (y/n)" +
-                "\n> "
-            )
-            if (ans.lower() == "y"):
-                args.ignore = ".DS_Store,Icon\r"
-            return args
+    if (curros == "Darwin" and args.which == "mk" and args.ignore == [""]):
+        ans = input(
+            "Detected macOS: " +
+            "Exclude files '.DS_Store' and 'Icon' from search? (y/n)" +
+            "\n> "
+        )
+        if (ans.lower() == "y"):
+            args.ignore = ".DS_Store,Icon\r"
+        return args
     return args
 
 
 def main():
     args = setup_args()
     setup_logging(args.log_level, args.log_format)
-    args = hook_convenience(args)
     logging.info(args)
 
     if ("which" not in args):
         raise ValueError("Command not specified!")
+
+    args = hook_search_tip(args)
 
     if (args.which == "mk"):
         mk(args.input_directory, args.output_file, args.ignore)
