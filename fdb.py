@@ -34,19 +34,21 @@ def setup_logging(log_level, log_format):
     logging.basicConfig(level=level, format=log_format)
 
 
-def setup_args():
+def setup_arg_parser():
     parser = argparse.ArgumentParser(
         description='fdb - File Database Utility'
     )
     parser.add_argument(
         '--log-level',
         default='WARNING',
-        help='desired log level'
+        help='sets the log level ' +
+        '(CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET). ' +
+        'Default: WARNING'
     )
     parser.add_argument(
         '--log-format',
         default='%(asctime)s - %(levelname)s - %(message)s',
-        help='desired log message format'
+        help='sets the log message format'
     )
     parser.add_argument(
         '--ignore',
@@ -54,18 +56,18 @@ def setup_args():
         type=lambda x: [
             bytes(y, ENCODING).decode('unicode_escape') for y in x.split(',')
         ],
-        help='comma delimited list of files to ignore ' +
+        help='sets the comma delimited list of files to ignore ' +
              '(supports escape characters)'
     )
 
     subparsers = parser.add_subparsers(
-        help='commands'
+        help='supported commands'
     )
 
     # mk
     mk_parser = subparsers.add_parser(
         'mk',
-        help='make a file database from a specified directory'
+        help='make a file database from the specified directory'
     )
     mk_parser.add_argument(
         'input_directory',
@@ -80,11 +82,11 @@ def setup_args():
     # fd
     fd_parser = subparsers.add_parser(
         'fd',
-        help='find duplicates in a file database using file hashes'
+        help='find duplicates in the file database using file hashes'
     )
     fd_parser.add_argument(
         'input_file',
-        help="input CSV file with a file database"
+        help='input CSV file with a file database'
     )
     fd_parser.add_argument(
         'output_file',
@@ -95,7 +97,8 @@ def setup_args():
     # diff
     diff_parser = subparsers.add_parser(
         'diff',
-        help='find diff between two databases'
+        help='compare two databases ' +
+        'using already computed hashes from the file databases'
     )
     diff_parser.add_argument(
         'source_db',
@@ -114,7 +117,7 @@ def setup_args():
     # hd
     hd_parser = subparsers.add_parser(
         'hd',
-        help='compute hash of all directory contents'
+        help='compute hash of entire directory contents'
     )
     hd_parser.add_argument(
         'directory',
@@ -125,16 +128,16 @@ def setup_args():
     # hdb
     hdb_parser = subparsers.add_parser(
         'hdb',
-        help='compute hash of all file database contents'
+        help='compute hash of all file database contents ' +
+        'using already computed hashes from the file database'
     )
     hdb_parser.add_argument(
         'input_file',
-        help="input CSV file with a file database"
+        help='input CSV file with a file database'
     )
     hdb_parser.set_defaults(which='hdb')
 
-    args = parser.parse_args()
-    return args
+    return parser
 
 
 def hash_file(path):
@@ -157,7 +160,7 @@ def get_file_list(directory, ignore):
         raise ValueError('Ignore list is none!')
     logging.info('Scanning directory: {}'.format(directory))
     file_list = []
-    for root, dirs, files in os.walk(directory):
+    for root, _, files in os.walk(directory):
         logging.info('Scanning contents: {}'.format(root))
         logging.info('Found files: {}'.format(len(files)))
         for fn in files:
@@ -349,84 +352,87 @@ def hd(directory, ignore):
 
     file_list = get_file_list(directory, ignore)
     list_length = len(file_list)
-    logging.info("Number of files: {}".format(list_length))
+    logging.info('Number of files: {}'.format(list_length))
 
     contents_digest = []
     inx = 0
     for file_name in file_list:
         logging.info(
-            "Processing ({}/{}, {:.2f}%) file: {}".format(
+            'Processing ({}/{}, {:.2f}%) file: {}'.format(
                 inx + 1, list_length, (inx + 1) / list_length * 100, file_name
             )
         )
         file_digest = hash_file(file_name)
-        logging.info("{} *{}".format(bin2str(file_digest), file_name))
+        logging.info('{} *{}'.format(bin2str(file_digest), file_name))
         contents_digest.extend(file_digest)
         inx += 1
     contents_digest.sort()
     hasher = hashlib.md5()
     hasher.update(bytes(contents_digest))
     directory_digest = hasher.hexdigest()
-    print("{} *{} ({})".format(directory_digest, directory, inx))
+    print('{} *{} ({})'.format(directory_digest, directory, inx))
 
 
 def hdb(input_file):
     if (not os.path.exists(input_file)):
-        raise ValueError("Path does not exist: {}".format(input_file))
+        raise ValueError('Path does not exist: {}'.format(input_file))
 
     db = read_database(input_file)
 
     contents_digest = []
     for row in db:
-        file_hash = row["hash"]
+        file_hash = row['hash']
         file_digest = binascii.unhexlify(file_hash)
         contents_digest.extend(file_digest)
     contents_digest.sort()
     hasher = hashlib.md5()
     hasher.update(bytes(contents_digest))
     db_digest = hasher.hexdigest()
-    print("{} *{} ({})".format(db_digest, input_file, len(contents_digest)))
+    print('{} *{} ({})'.format(db_digest, input_file, len(contents_digest)))
 
 
 def hook_search_tip(args):
     curros = platform.system()
-    if (curros == "Darwin" and args.which == "mk" and args.ignore == [""]):
+    if (curros == 'Darwin' and args.which == 'mk' and args.ignore == ['']):
         ans = input(
-            "Detected macOS: " +
-            "Exclude files '.DS_Store' and 'Icon' from search? (y/n)" +
-            "\n> "
+            'Detected macOS: ' +
+            'Exclude files ".DS_Store" and "Icon." from search? (y/n)' +
+            '\n> '
         )
-        if (ans.lower() == "y"):
-            args.ignore = ".DS_Store,Icon\r"
+        if (ans.lower() == 'y'):
+            args.ignore = '.DS_Store,Icon\r'
         return args
     return args
 
 
 def main():
-    args = setup_args()
+    parser = setup_arg_parser()
+    args = parser.parse_args()
     setup_logging(args.log_level, args.log_format)
     logging.info(args)
 
-    if ("which" not in args):
-        raise ValueError("Command not specified!")
+    if ('which' not in args):
+        parser.print_help()
+        print()
+        raise ValueError('Command not specified!')
 
     args = hook_search_tip(args)
 
-    if (args.which == "mk"):
+    if (args.which == 'mk'):
         mk(args.input_directory, args.output_file, args.ignore)
-    elif (args.which == "fd"):
+    elif (args.which == 'fd'):
         fd(args.input_file, args.output_file)
-    elif (args.which == "diff"):
+    elif (args.which == 'diff'):
         diff(args.source_db, args.destination_db, args.output_file)
-    elif (args.which == "hd"):
+    elif (args.which == 'hd'):
         hd(args.directory, args.ignore)
-    elif (args.which == "hdb"):
+    elif (args.which == 'hdb'):
         hdb(args.input_file)
     else:
         raise ValueError('Unknown command!')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     try:
         main()
     except Exception as e:

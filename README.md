@@ -32,6 +32,13 @@ Print out the diff between the two databases:
 python fdb.py diff source_db.csv destination_db.csv diff.csv
 ```
 
+The obtained above diff file can be processed with the following Bash command:
+
+```
+tail -n +2 diff.csv | cut -d ',' -f1 | xargs -I % cp -p "%" some_destination_directory/
+```
+
+This will copy all the files that are missing in the destination_db.
 
 ## Notes
 
