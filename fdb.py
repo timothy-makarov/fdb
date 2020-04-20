@@ -41,9 +41,7 @@ def setup_arg_parser():
     parser.add_argument(
         '--log-level',
         default='WARNING',
-        help='sets the log level ' +
-        '(CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET). ' +
-        'Default: WARNING'
+        help='sets the log level (CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET). Default: WARNING'
     )
     parser.add_argument(
         '--log-format',
@@ -56,8 +54,7 @@ def setup_arg_parser():
         type=lambda x: [
             bytes(y, ENCODING).decode('unicode_escape') for y in x.split(',')
         ],
-        help='sets the comma delimited list of files to ignore ' +
-             '(supports escape characters)'
+        help='sets the comma delimited list of files to ignore (supports escape characters)'
     )
 
     subparsers = parser.add_subparsers(
@@ -97,20 +94,21 @@ def setup_arg_parser():
     # diff
     diff_parser = subparsers.add_parser(
         'diff',
-        help='compare two databases ' +
-        'using already computed hashes from the file databases'
+        help='compare two databases using already computed hashes from the file databases ' +
+             '(Note: diff is directional, i.e. diff(A1, A2) != diff(A2, A1))'
     )
     diff_parser.add_argument(
         'source_db',
-        help='CSV file with a file database of the source directory'
+        help='CSV file with a file database of the source directory (copy files "from" this directory)'
     )
     diff_parser.add_argument(
         'destination_db',
-        help='CSV file with a file database of the destination directory'
+        help='CSV file with a file database of the destination directory (copy files "to" this directory)'
     )
     diff_parser.add_argument(
         'output_file',
-        help='output file with a diff database'
+        help='output file with a diff database ' +
+             '(files from the source directory, that do not exist in the destination directory)'
     )
     diff_parser.set_defaults(which='diff')
 
@@ -128,8 +126,7 @@ def setup_arg_parser():
     # hdb
     hdb_parser = subparsers.add_parser(
         'hdb',
-        help='compute hash of all file database contents ' +
-        'using already computed hashes from the file database'
+        help='compute hash of all file database contents using already computed hashes from the file database'
     )
     hdb_parser.add_argument(
         'input_file',
@@ -337,9 +334,8 @@ def diff(source_db, destination_db, output_file):
             inx += 1
         if (inx != 1):
             logging.warning(
-                'Duplicates were found in source database: {} ({})'.format(
-                    source_db, src_key
-                )
+                'Duplicates were found in the source database: {} ({}: {})'.format(
+                    source_db, inx - 1, src_key)
             )
     logging.info('Files in diff: {}'.format(len(diff_db)))
 
