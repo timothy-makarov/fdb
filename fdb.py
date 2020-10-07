@@ -20,6 +20,7 @@ ENCODING = 'utf8'
 DELIMITER = ','
 
 COLUMNS = [
+    'timestamp',
     'filename',
     'extension',
     'created',
@@ -189,6 +190,7 @@ def create_db(directory, ignore):
             file_size = file_stat.st_size
             file_hash = bin2str(hash_file(file_name))
             db.append([
+                datetime.now(),
                 file_name,
                 file_ext,
                 file_ct,
@@ -200,6 +202,7 @@ def create_db(directory, ignore):
         except PermissionError:
             logging.warning('File permission error: {}'.format(file_name))
             db.append([
+                datetime.now(),
                 file_name,
                 'NA',
                 'NA',
